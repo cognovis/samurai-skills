@@ -1,0 +1,14 @@
+{
+  "plugins": [
+    {
+      "name": "aidbox",
+      "description": "Aidbox FHIR platform — API reference, configuration, access control, and development guidance",
+      "skills": ["aidbox"]
+    },
+    {
+      "name": "health-samurai-all",
+      "description": "All Health Samurai skills",
+      "skills": ["aidbox"]
+    }
+  ]
+}
