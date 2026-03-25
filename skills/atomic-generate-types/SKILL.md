@@ -5,7 +5,7 @@ description: Generate or update FHIR types using @atomic-ehr/codegen with tree-s
 
 # FHIR Type Generation with @atomic-ehr/codegen
 
-Generate type-safe FHIR R4 types from StructureDefinitions. Supports **TypeScript**, **Python**, and **C#**. Uses tree-shaking to only include the resource types you need.
+Generate type-safe FHIR types from StructureDefinitions. Supports **TypeScript**, **Python**, and **C#**. Uses tree-shaking to only include the resource types you need.
 
 > **Language detection:** Before setup, detect the project language from existing files (e.g., `tsconfig.json` → TypeScript, `pyproject.toml`/`requirements.txt` → Python, `*.csproj`/`*.sln` → C#). Use the matching language section below.
 
@@ -15,7 +15,7 @@ Generate type-safe FHIR R4 types from StructureDefinitions. Supports **TypeScrip
 
 ### 1. Install the codegen package
 
-The generation script is always written in TypeScript and executed with `bun` or `tsx`. Install the codegen package in your project (or in a separate scripts directory for non-JS projects):
+The generation script is always written in TypeScript and executed with `bun`, `tsx` (installed via `npm`, `pnpm` or `yarn`). Install the codegen package in your project (or in a separate scripts directory for non-JS projects):
 
 ```sh
 # npm
@@ -165,11 +165,14 @@ For npm/pnpm/yarn projects (using tsx instead of bun):
 
 ### 5. Additional setup per language
 
-**TypeScript** — include scripts in `tsconfig.json`:
+**TypeScript** — ensure `tsconfig.json` has the required compiler options for generated imports:
 
 ```json
 {
-  "include": ["src/**/*", "scripts/**/*"]
+  "compilerOptions": {
+    "moduleResolution": "bundler",
+    "allowImportingTsExtensions": true
+  }
 }
 ```
 
@@ -177,6 +180,13 @@ For npm/pnpm/yarn projects (using tsx instead of bun):
 
 ```sh
 pip install pydantic>=2.11.0
+```
+
+For mypy support, add the Pydantic plugin to `mypy.ini`:
+
+```ini
+[mypy]
+plugins = pydantic.mypy
 ```
 
 **C#** — no additional setup needed. Generated files include `Usings.cs` with necessary `using` statements.
@@ -202,8 +212,10 @@ Commit the generated files — they are the project's FHIR type definitions.
 
 ### Loading FHIR packages
 
+> **Important:** Only load packages that the user explicitly requires. Avoid adding unnecessary packages — especially core packages, which should be pulled in as dependencies of the user's IG rather than loaded directly.
+
 ```ts
-// FHIR R4 base (required)
+// FHIR R4 base
 .fromPackage("hl7.fhir.r4.core", "4.0.1")
 
 // Implementation Guides (optional) — load from tgz URL
