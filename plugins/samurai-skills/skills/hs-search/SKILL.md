@@ -13,7 +13,7 @@ Search health-samurai.io content: docs, blog, case studies, landing pages, code 
 ## Search
 
 ```bash
-curl -s 'http://localhost:4444/api/llm/search?q=keywords+here&limit=10'
+curl -s 'https://www.health-samurai.io/api/llm/search?q=keywords+here&limit=10'
 # Optional: &section=docs|blog|landing — filter by content type
 ```
 
@@ -28,7 +28,7 @@ When snippets aren't enough (how-to, setup guides, code examples), fetch the `.m
 ```bash
 # search result url: /docs/aidbox/access-control/authorization/access-policies#structure
 # → strip anchor, add .md:
-curl -s 'http://localhost:4444/docs/aidbox/access-control/authorization/access-policies.md'
+curl -s 'https://www.health-samurai.io/docs/aidbox/access-control/authorization/access-policies.md'
 ```
 
 Works for `/docs/...`, `/articles/...`, and top-level pages (`/aidbox.md`, `/price.md`). Not available for GitHub example URLs. Fetch one page at a time — pages can be large.
@@ -38,8 +38,8 @@ Works for `/docs/...`, `/articles/...`, and top-level pages (`/aidbox.md`, `/pri
 For broad questions ("what products exist?", "what docs are available?"):
 
 ```bash
-curl -s 'http://localhost:4444/llms.txt'           # site overview
-curl -s 'http://localhost:4444/docs/aidbox/llms.txt' # aidbox docs tree
+curl -s 'https://www.health-samurai.io/llms.txt'           # site overview
+curl -s 'https://www.health-samurai.io/docs/aidbox/llms.txt' # aidbox docs tree
 ```
 
 ## Answer guidelines
@@ -55,9 +55,9 @@ User: "How do I configure access policies in Aidbox?"
 
 ```bash
 # 1. Search
-curl -s 'http://localhost:4444/api/llm/search?q=AccessPolicy'
+curl -s 'https://www.health-samurai.io/api/llm/search?q=AccessPolicy'
 # 2. Best result: url=/docs/aidbox/access-control/authorization/access-policies#structure
 # 3. Snippet too short → fetch full page
-curl -s 'http://localhost:4444/docs/aidbox/access-control/authorization/access-policies.md'
+curl -s 'https://www.health-samurai.io/docs/aidbox/access-control/authorization/access-policies.md'
 # 4. Answer from full content, link to the page with https://health-samurai.io base
 ```
