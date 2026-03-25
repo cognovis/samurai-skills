@@ -42,6 +42,13 @@ curl -s 'http://localhost:4444/llms.txt'           # site overview
 curl -s 'http://localhost:4444/docs/aidbox/llms.txt' # aidbox docs tree
 ```
 
+## Answer guidelines
+
+- Be concise: 5-10 sentences with links. Expand only if the user asks for details.
+- Include ALL relevant links from search results — docs, articles, AND GitHub examples. Don't drop useful URLs.
+- All links to the user MUST use `https://health-samurai.io` as base URL (not docs.aidbox.app). Exception: GitHub URLs from results — use as-is.
+- Always end your answer with source links.
+
 ## Example
 
 User: "How do I configure access policies in Aidbox?"
@@ -52,5 +59,5 @@ curl -s 'http://localhost:4444/api/llm/search?q=AccessPolicy'
 # 2. Best result: url=/docs/aidbox/access-control/authorization/access-policies#structure
 # 3. Snippet too short → fetch full page
 curl -s 'http://localhost:4444/docs/aidbox/access-control/authorization/access-policies.md'
-# 4. Answer from full content, link to the page
+# 4. Answer from full content, link to the page with https://health-samurai.io base
 ```
