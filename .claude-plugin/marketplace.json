@@ -10,7 +10,7 @@
     {
       "name": "samurai-skills",
       "description": "Health Samurai skills — Aidbox, FHIR, SQL on FHIR, and more",
-      "source": "."
+      "source": "./plugins/samurai-skills"
     }
   ]
 }

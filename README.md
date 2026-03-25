@@ -24,21 +24,22 @@ Skills are namespaced: `/samurai-skills:aidbox`, `/samurai-skills:hs-search`, et
 
 ## Creating a new skill
 
-Each skill is a folder under `skills/` with a `SKILL.md` file. See [Skills docs](https://code.claude.com/docs/en/skills) for the frontmatter format.
+Use `template/SKILL.md` as a starting point. Each skill is a folder under `plugins/samurai-skills/skills/` with a `SKILL.md` file. See [Skills docs](https://code.claude.com/docs/en/skills) for the frontmatter format.
 
 ## Structure
 
 ```
 .claude-plugin/
-├── plugin.json            # Plugin manifest
-└── marketplace.json       # Marketplace listing
-skills/
-├── aidbox/                # Aidbox FHIR platform
-│   └── SKILL.md
-├── aidbox-sql-on-fhir/    # SQL on FHIR ViewDefinitions & analytics
-│   └── SKILL.md
-├── atomic-generate-types/ # FHIR type generation
-│   └── SKILL.md
-└── hs-search/             # Health Samurai site search
-    └── SKILL.md
+└── marketplace.json                    # Marketplace catalog
+plugins/
+└── samurai-skills/                     # Plugin
+    ├── .claude-plugin/
+    │   └── plugin.json                 # Plugin manifest
+    └── skills/
+        ├── aidbox/SKILL.md
+        ├── aidbox-sql-on-fhir/SKILL.md
+        ├── atomic-generate-types/SKILL.md
+        └── hs-search/SKILL.md
+template/
+└── SKILL.md                            # Template for new skills
 ```
