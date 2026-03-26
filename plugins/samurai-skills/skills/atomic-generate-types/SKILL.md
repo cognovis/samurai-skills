@@ -48,7 +48,7 @@ import { APIBuilder, prettyReport } from "@atomic-ehr/codegen";
 
 const builder = new APIBuilder()
   .throwException()
-  .fromPackage("hl7.fhir.r4.core", "4.0.1")
+  .fromPackage("<package name such as hl7.fhir.r4.core or hl7.fhir.us.core>", "<package version, such as 4.0.1 or 3.1.1>")
   .typescript({
     withDebugComment: false,
     generateProfile: false,
@@ -56,7 +56,7 @@ const builder = new APIBuilder()
   })
   .typeSchema({
     treeShake: {
-      "hl7.fhir.r4.core": {
+      "<package name such as hl7.fhir.r4.core or hl7.fhir.us.core>": {
         // Add the resource types you need here.
         // All dependency types (Identifier, Reference, CodeableConcept, etc.)
         // are included automatically.
@@ -81,7 +81,7 @@ import { APIBuilder, prettyReport } from "@atomic-ehr/codegen";
 
 const builder = new APIBuilder()
   .throwException()
-  .fromPackage("hl7.fhir.r4.core", "4.0.1")
+  .fromPackage("<package name such as hl7.fhir.r4.core or hl7.fhir.us.core>", "<package version, such as 4.0.1 or 3.1.1>")
   .python({
     rootPackageName: "fhir_types",
     fieldFormat: "snake_case",
@@ -90,7 +90,7 @@ const builder = new APIBuilder()
   })
   .typeSchema({
     treeShake: {
-      "hl7.fhir.r4.core": {
+      "<package name such as hl7.fhir.r4.core or hl7.fhir.us.core>": {
         // Add the resource types you need here.
         // All dependency types are included automatically.
         "http://hl7.org/fhir/StructureDefinition/Patient": {},
@@ -114,13 +114,13 @@ import { APIBuilder, prettyReport } from "@atomic-ehr/codegen";
 
 const builder = new APIBuilder()
   .throwException()
-  .fromPackage("hl7.fhir.r4.core", "4.0.1")
+  .fromPackage("<package name such as hl7.fhir.r4.core or hl7.fhir.us.core>", "<package version, such as 4.0.1 or 3.1.1>")
   .csharp({
     rootNamespace: "Fhir.Types",
   })
   .typeSchema({
     treeShake: {
-      "hl7.fhir.r4.core": {
+      "<package name such as hl7.fhir.r4.core or hl7.fhir.us.core>": {
         // Add the resource types you need here.
         // All dependency types are included automatically.
         "http://hl7.org/fhir/StructureDefinition/Patient": {},
