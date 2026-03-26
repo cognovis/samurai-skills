@@ -4,14 +4,26 @@ Claude Code plugin with skills for Health Samurai products and healthcare develo
 
 ## Installation
 
-Add the marketplace and install the plugin:
+Add the marketplace:
 
 ```bash
 claude plugin marketplace add HealthSamurai/samurai-skills
+```
+
+Install all skills at once:
+
+```bash
 claude plugin install samurai-skills@samurai-skills
 ```
 
-Skills are namespaced: `/samurai-skills:aidbox`, `/samurai-skills:hs-search`, etc.
+Or install individual skills:
+
+```bash
+claude plugin install aidbox@samurai-skills
+claude plugin install aidbox-sql-on-fhir@samurai-skills
+claude plugin install atomic-generate-types@samurai-skills
+claude plugin install hs-search@samurai-skills
+```
 
 ## Skills
 
