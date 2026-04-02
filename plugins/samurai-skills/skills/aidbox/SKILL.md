@@ -4,25 +4,21 @@ description: >
   Aidbox FHIR platform by Health Samurai. Use when user works with Aidbox — FHIR REST API,
   CRUD operations, search, transactions, bundles, access policies, subscriptions, custom
   resources, SQL on FHIR, bulk operations, terminology, profiles, Aidbox configuration,
-  docker setup, environment variables, Aidbox SDK, zen configuration, aidbox-zen-lang,
+  docker setup, environment variables, Aidbox SDK,
   AccessPolicy, SearchParameter, AidboxSubscription, AidboxTopicDestination, Operation,
-  first-class extensions, or any Aidbox-specific features. Also triggers on mentions of
+  or any Aidbox-specific features. Also triggers on mentions of
   "aidbox", "aidboxone", "devbox", "multibox", "aidbox forms", "aidbox MPI".
 ---
 
 # Aidbox FHIR Platform
 
-Aidbox is a FHIR-native platform built on PostgreSQL. It provides FHIR R4 API with extensions for real-world production use.
+Aidbox is a FHIR-native platform built on PostgreSQL. It provides FHIR API with extensions for real-world production use.
 
 ## Documentation
 
-Aidbox docs live at `https://docs.aidbox.app` (redirects to `https://www.health-samurai.io/docs/aidbox`).
+Aidbox docs live at `https://www.health-samurai.io/docs/aidbox`.
 
-When you need detailed docs on a specific topic, fetch the relevant page:
-
-```
-https://www.health-samurai.io/docs/aidbox/<section>/<page>
-```
+When you need to look up Aidbox documentation, use the `hs-search` skill — it can search and fetch full pages from health-samurai.io docs. Invoke it with `/hs-search` or let it trigger automatically when searching for Aidbox docs.
 
 ## Architecture
 
@@ -30,26 +26,153 @@ https://www.health-samurai.io/docs/aidbox/<section>/<page>
 - **API layers**: FHIR REST, SQL, GraphQL, Subscriptions
 - **Auth**: OAuth 2.0, SMART on FHIR, RBAC/ABAC via AccessPolicy
 - **Validation**: FHIR Schema (simplified StructureDefinitions), FHIRPath invariants
-- **Config**: Environment variables + zen-lang configuration
+- **Config**: Environment variables + Init Bundle
+
+## Setting Up a New Aidbox Instance
+
+To quickly set up a new Aidbox instance with Docker Compose:
+
+```bash
+# Download the docker-compose.yml
+curl -JO https://aidbox.app/runme
+
+# Start Aidbox
+docker compose up -d
+```
+
+This downloads a pre-configured `docker-compose.yml` with recommended environment variables. Always use a fresh download — don't write docker-compose.yml manually. After starting, read the downloaded file to find the port (`AIDBOX_PORT`) and root client secret (`BOX_ROOT_CLIENT_SECRET`).
+
+Open the Aidbox UI in the browser (check the port in `docker-compose.yml`, typically `http://localhost:8080`). On first launch, click "Continue with Aidbox account" to create a free account at https://aidbox.app/ and activate the instance.
+
+For the full getting started guide, fetch:
+
+```bash
+curl -s 'https://www.health-samurai.io/docs/aidbox/getting-started/run-aidbox-locally.md'
+```
+
+## Init Bundle
+
+Init Bundle is the primary way to configure Aidbox. It executes a FHIR Bundle at startup, before the HTTP server starts, to load configuration resources (AccessPolicy, SearchParameter, SubscriptionTopic, custom StructureDefinitions, seed data, etc.).
+
+### Setup
+
+Set `BOX_INIT_BUNDLE` in `docker-compose.yml` to point to your bundle file:
+
+```yaml
+environment:
+  BOX_INIT_BUNDLE: file:///app/init-bundle.json
+```
+
+Supported URL schemes: `file:///path/to/bundle.json`, `https://storage.googleapis.com/...`
+
+### Bundle format
+
+Only JSON format is supported. Use `transaction` (all-or-nothing — startup fails if any entry fails) or `batch` (partial failures produce warnings but don't block startup):
+
+```json
+{
+  "resourceType": "Bundle",
+  "type": "transaction",
+  "entry": [
+    {
+      "resource": {
+        "resourceType": "AccessPolicy",
+        "id": "as-my-app-crud-patients",
+        "engine": "matcho",
+        "link": [{"reference": "Client/my-app"}],
+        "matcho": {
+          "params": {"resource/type": "Patient"},
+          "request-method": {"$enum": ["get", "post", "put", "patch"]}
+        }
+      },
+      "request": { "method": "PUT", "url": "AccessPolicy/as-my-app-crud-patients" }
+    }
+  ]
+}
+```
+
+### Best practices
+
+- **Test before using as init bundle**: POST the bundle to `/fhir` manually first. Post it multiple times to confirm it is idempotent.
+- **Use conditional creates for seed data**: use `ifNoneExist` in requests to avoid duplicate key errors on restart.
+- **Use PUT with explicit ids** for configuration resources (AccessPolicy, SearchParameter) so they are updated on restart.
+- Environment variables can be injected into the bundle using `envsubst`.
+
+### Loading FHIR Implementation Guides
+
+Init Bundle can load FHIR IGs automatically at startup. Search the docs for details:
+
+```bash
+curl -s 'https://www.health-samurai.io/api/llm/search?q=load+FHIR+IG+init+bundle&limit=5'
+```
+
+For full documentation:
+
+```bash
+curl -s 'https://www.health-samurai.io/docs/aidbox/configuration/init-bundle.md'
+```
 
 ## FHIR REST API
 
-### Base URLs
+### Base URL
 
-Aidbox exposes two API formats:
-- `/fhir/<ResourceType>` — strict FHIR-compliant (for external clients)
-- `/<ResourceType>` — Aidbox format (first-class extensions, flat structure)
+**Always use the `/fhir/` prefix** for all Aidbox API interactions (e.g., `/fhir/Patient`, `/fhir/Observation`). Never use URLs without the `/fhir/` prefix — the non-prefixed format (`/Patient`) is deprecated.
+
+### Authentication
+
+For applications, create a dedicated `Client` resource with appropriate AccessPolicies (see Access Policies section). Load it via Init Bundle:
+
+```json
+{
+  "resourceType": "Client",
+  "id": "my-app",
+  "secret": "<my-app-secret>",
+  "grant_types": ["basic"]
+}
+```
+
+Then authenticate with Basic Auth:
+
+```bash
+curl -s -u "my-app:my-app-secret" "http://localhost:<port>/fhir/Patient"
+```
+
+For quick manual testing only, use the root client (`root` / password from `BOX_ROOT_CLIENT_SECRET` in `docker-compose.yml`). The root client bypasses all access policies — never use it in application code.
+
+```bash
+# Root client — for debugging/testing only
+curl -s -u "root:<BOX_ROOT_CLIENT_SECRET>" "http://localhost:<port>/fhir/Patient"
+```
 
 ### CRUD
 
-```http
-POST   /fhir/Patient              # Create (server assigns id)
-PUT    /fhir/Patient/<id>         # Create or replace
-GET    /fhir/Patient/<id>         # Read
-PATCH  /fhir/Patient/<id>         # Partial update (merge-patch or json-patch)
-DELETE /fhir/Patient/<id>         # Delete
-GET    /fhir/Patient/<id>/_history # Instance history
-GET    /fhir/Patient/_history      # Type history
+```bash
+# Read a specific resource
+curl -s -u "<client>:<secret>" "http://localhost:<port>/fhir/Patient/<id>" | python3 -m json.tool
+
+# Search resources
+curl -s -u "<client>:<secret>" "http://localhost:<port>/fhir/Patient?name=John&_count=10" | python3 -m json.tool
+
+# Create (POST)
+curl -s -u "<client>:<secret>" -X POST "http://localhost:<port>/fhir/Patient" \
+  -H "Content-Type: application/fhir+json" \
+  -d '{"resourceType":"Patient","name":[{"given":["Test"],"family":"User"}]}' | python3 -m json.tool
+
+# Update (PUT) — requires id in both URL and body
+curl -s -u "<client>:<secret>" -X PUT "http://localhost:<port>/fhir/Patient/<id>" \
+  -H "Content-Type: application/fhir+json" \
+  -d '{"resourceType":"Patient","id":"<id>","name":[{"given":["Updated"],"family":"User"}]}' | python3 -m json.tool
+
+# Partial update (PATCH)
+curl -s -u "<client>:<secret>" -X PATCH "http://localhost:<port>/fhir/Patient/<id>" \
+  -H "Content-Type: application/merge-patch+json" \
+  -d '{"birthDate":"1990-01-01"}' | python3 -m json.tool
+
+# Delete
+curl -s -u "<client>:<secret>" -X DELETE "http://localhost:<port>/fhir/Patient/<id>"
+
+# History
+curl -s -u "<client>:<secret>" "http://localhost:<port>/fhir/Patient/<id>/_history" | python3 -m json.tool
 ```
 
 ### Search
@@ -67,25 +190,24 @@ Prefixes for date/number: `eq`, `ne`, `gt`, `lt`, `ge`, `le`, `sa`, `eb`, `ap`
 
 ### Bundles (Transaction/Batch)
 
-```http
-POST /fhir
-Content-Type: application/fhir+json
-
-{
-  "resourceType": "Bundle",
-  "type": "transaction",
-  "entry": [
-    {
-      "fullUrl": "urn:uuid:patient-1",
-      "resource": {"resourceType": "Patient", "name": [{"family": "Smith"}]},
-      "request": {"method": "POST", "url": "Patient"}
-    },
-    {
-      "resource": {"resourceType": "Observation", "subject": {"reference": "urn:uuid:patient-1"}},
-      "request": {"method": "POST", "url": "Observation"}
-    }
-  ]
-}
+```bash
+curl -s -u "<client>:<secret>" -X POST "http://localhost:<port>/fhir" \
+  -H "Content-Type: application/fhir+json" \
+  -d '{
+    "resourceType": "Bundle",
+    "type": "transaction",
+    "entry": [
+      {
+        "fullUrl": "urn:uuid:patient-1",
+        "resource": {"resourceType": "Patient", "name": [{"family": "Smith"}]},
+        "request": {"method": "POST", "url": "Patient"}
+      },
+      {
+        "resource": {"resourceType": "Observation", "subject": {"reference": "urn:uuid:patient-1"}},
+        "request": {"method": "POST", "url": "Observation"}
+      }
+    ]
+  }' | python3 -m json.tool
 ```
 
 Transaction = all-or-nothing. Batch = independent operations, partial success OK.
@@ -108,49 +230,108 @@ Content-Type: application/fhir+json
 
 ## Aidbox-Specific Features
 
-### First-Class Extensions
-
-In Aidbox format (`/Patient` not `/fhir/Patient`), extensions are first-class attributes:
-
-```json
-// FHIR format
-{"extension": [{"url": "http://example.com/race", "valueString": "..."}]}
-
-// Aidbox format — flat
-{"race": "..."}
-```
-
 ### Custom Resources
 
-Define custom resource types via zen-lang or Aidbox UI:
+Define custom resource types using StructureDefinition (the recommended approach). The `id`, `name`, and `type` must match; set `derivation: specialization` to create a new resource type with its own database table.
 
-```yaml
-# In zen project
-MyCustomResource:
-  zen/tags: #{zen.fhir/base-schema}
-  type: zen/map
-  keys:
-    myField: {type: zen/string}
+For a full tutorial with examples, use the `hs-search` skill or fetch:
+
+```bash
+curl -s 'https://www.health-samurai.io/docs/aidbox/tutorials/artifact-registry-tutorials/custom-resources/custom-resources-using-structuredefinition.md'
 ```
 
 ### Access Policies
 
-```json
-{
-  "resourceType": "AccessPolicy",
-  "id": "patient-read-policy",
-  "engine": "json-schema",
-  "schema": {
-    "required": ["request-method", "uri"],
-    "properties": {
-      "request-method": {"const": "get"},
-      "uri": {"pattern": "^/fhir/Patient.*"}
-    }
-  }
-}
+Use the `matcho` engine (recommended). Link policies to `Client`, `User`, or `Operation` — unlinked policies are global and evaluate on every request, hurting performance.
+
+#### Client CRUD on specific resource types
+
+```yaml
+id: as-my-app-crud-patients-and-practitioners
+resourceType: AccessPolicy
+engine: matcho
+link:
+  - reference: Client/my-app
+matcho:
+  params:
+    resource/type:
+      $enum:
+        - Patient
+        - Practitioner
+  request-method:
+    $enum:
+      - get
+      - post
+      - patch
+      - put
 ```
 
-Engines: `json-schema`, `sql`, `matcho`, `allow`, `complex`.
+#### Client allowed to use FHIR transactions
+
+```yaml
+id: as-my-app-allowed-to-use-fhir-transactions
+resourceType: AccessPolicy
+engine: matcho
+link:
+  - reference: Client/my-app
+matcho:
+  operation:
+    id: FhirTransaction
+```
+
+Note: this only allows access to the `/fhir` transaction endpoint. Individual resource operations within the bundle need their own policies.
+
+#### Patient viewing own data
+
+```yaml
+id: as-patient-get-own-data
+resourceType: AccessPolicy
+engine: matcho
+link:
+  - reference: Operation/FhirRead
+matcho:
+  params:
+    resource/id: .user.fhirUser.id
+    resource/type: Patient
+```
+
+#### Best practices
+
+- **Name with `as-` prefix**: describe the audience and action (e.g., `as-practitioner-read-observations`)
+- **Always link** to `Client`, `User`, or `Operation` — avoid global policies
+- **Test `.` paths for `present?`**: if both sides of a `.user.data.field` comparison are missing, matcho may evaluate to true. Add explicit `present?` checks:
+  ```yaml
+  matcho:
+    body:
+      subject: .user.data.patient
+    user:
+      data:
+        patient: present?
+  ```
+- **Disable unsafe search params** on public endpoints:
+  ```yaml
+  matcho:
+    params:
+      _include: nil?
+      _revinclude: nil?
+      _with: nil?
+      _assoc: nil?
+  ```
+- **Prefer small, separate policies** over `complex` with `or` — easier to maintain and Aidbox logs which policy granted access
+- **Avoid regex** when plain strings or `$one-of` work
+
+For more examples and best practices:
+
+```bash
+curl -s 'https://www.health-samurai.io/docs/aidbox/tutorials/security-access-control-tutorials/accesspolicy-examples.md'
+curl -s 'https://www.health-samurai.io/docs/aidbox/tutorials/security-access-control-tutorials/accesspolicy-best-practices.md'
+```
+
+To inspect current policies:
+
+```bash
+curl -s -u "<client>:<secret>" "http://localhost:<port>/fhir/AccessPolicy?_count=50" | python3 -m json.tool
+```
 
 ### SQL API
 
@@ -161,7 +342,7 @@ Content-Type: text/yaml
 - select * from patient where resource->>'birthDate' > '1990-01-01' limit 10
 ```
 
-Or via `/\$psql` for interactive queries. Tables follow naming: resource type in lowercase (e.g., `patient`, `observation`). Resource stored in `resource` JSONB column.
+Or via `/$psql` for interactive queries. Tables follow naming: resource type in lowercase (e.g., `patient`, `observation`). Resource stored in `resource` JSONB column.
 
 ### Subscriptions (Topic-Based)
 
@@ -191,95 +372,200 @@ POST /fhir/CodeSystem/$lookup
 POST /fhir/ConceptMap/$translate
 ```
 
-## Running Aidbox
+## TypeScript SDK: @health-samurai/aidbox-client
 
-### Docker Compose (typical setup)
-
-```yaml
-services:
-  aidbox:
-    image: healthsamurai/aidboxone:latest
-    ports:
-      - "8888:8888"
-    environment:
-      AIDBOX_LICENSE: <license-key>
-      PGHOST: db
-      PGPORT: 5432
-      PGDATABASE: aidbox
-      PGUSER: postgres
-      PGPASSWORD: postgres
-      AIDBOX_PORT: 8888
-      AIDBOX_FHIR_VERSION: 4.0.1
-      AIDBOX_BASE_URL: http://localhost:8888
-      AIDBOX_ADMIN_ID: admin
-      AIDBOX_ADMIN_PASSWORD: password
-      AIDBOX_CLIENT_ID: root
-      AIDBOX_CLIENT_SECRET: secret
-    depends_on:
-      db:
-        condition: service_healthy
-
-  db:
-    image: healthsamurai/aidboxdb:17.2
-    environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: aidbox
-    healthcheck:
-      test: pg_isready -U postgres
-      interval: 5s
-```
-
-### Key Environment Variables
-
-| Variable | Description |
-|----------|-------------|
-| `AIDBOX_LICENSE` | License key (required) |
-| `AIDBOX_FHIR_VERSION` | `4.0.1` (R4) or `4.0.0` |
-| `AIDBOX_PORT` | HTTP port (default 8888) |
-| `AIDBOX_BASE_URL` | Public base URL |
-| `AIDBOX_ADMIN_ID/PASSWORD` | Admin user credentials |
-| `AIDBOX_CLIENT_ID/SECRET` | Root client credentials |
-| `AIDBOX_ZEN_PROJECT` | Path to zen project |
-| `AIDBOX_ZEN_ENTRYPOINT` | Zen namespace entrypoint |
-| `BOX_SEARCH_FHIR__COMPARISONS` | Enable FHIR search comparisons |
-| `BOX_FEATURES_VALIDATION_SKIP` | Skip validation (dev only) |
-
-## Auth & Clients
-
-```http
-# Get token via client credentials
-POST /auth/token
-Content-Type: application/x-www-form-urlencoded
-
-grant_type=client_credentials&client_id=root&client_secret=secret
-```
+Install (ESM-only package):
 
 ```bash
-# Use with curl
-curl -u root:secret http://localhost:8888/fhir/Patient
+npm install @health-samurai/aidbox-client@alpha
 ```
 
-## SDKs
+### Initialization
 
-- **TypeScript**: `@aidbox/sdk-r4` — typed FHIR client
-- **Python**: `aidbox-python` — FHIR client
-- **Java**: Aidbox Java SDK
-- **C#**: Aidbox .NET SDK
+```typescript
+import { AidboxClient, BasicAuthProvider } from "@health-samurai/aidbox-client";
 
-## Workflow: Common Tasks
+// Use a dedicated Client resource (see Authentication section)
+const baseUrl = "http://localhost:8888";
+const client = new AidboxClient(baseUrl, new BasicAuthProvider(baseUrl, "my-app", "my-app-secret"));
+```
 
-### 1. Loading data
-Use transaction bundles or `$import` for bulk loading. For large datasets prefer `$import` with ndjson.
+Auth providers:
+- `BasicAuthProvider(baseUrl, username, password)` — HTTP Basic Auth (server-side)
+- `BrowserAuthProvider(baseUrl)` — cookie-based sessions (browser)
+- `SmartBackendServicesAuthProvider(...)` — OAuth 2.0 SMART Backend Services
 
-### 2. Setting up search
-Create SearchParameter resources for custom search params. Aidbox auto-indexes them.
+### Result Type
 
-### 3. Adding profiles
-Upload StructureDefinition resources. Enable validation per-resource or globally via `AIDBOX_VALIDATION`.
+All methods return `Result<ResourceResponse<T>, ResourceResponse<OperationOutcome>>`:
 
-### 4. Access control
-Create AccessPolicy resources. Test with `POST /$access-policy-check`.
+```typescript
+const result = await client.read<Patient>({ type: "Patient", id: "pt-1" });
+if (result.isOk()) {
+  const patient = result.value.resource;
+} else {
+  const error = result.value.resource; // OperationOutcome
+}
+```
 
-### 5. Integrations
-Use AidboxTopicDestination for webhooks, or poll `_history` for changes.
+### CRUD
+
+```typescript
+// Read
+const result = await client.read<Patient>({ type: "Patient", id: "pt-1" });
+
+// Create
+const result = await client.create<Patient>({
+  type: "Patient",
+  resource: { resourceType: "Patient", gender: "female" },
+});
+
+// Update (PUT)
+const result = await client.update<Patient>({
+  type: "Patient",
+  id: "pt-1",
+  resource: { resourceType: "Patient", name: [{ family: "Smith" }] },
+});
+
+// Patch (JSON Patch)
+const result = await client.patch<Patient>({
+  type: "Patient",
+  id: "pt-1",
+  patch: [{ op: "replace", path: "/name/0/family", value: "NewName" }],
+});
+
+// Delete
+const result = await client.delete<Patient>({ type: "Patient", id: "pt-1" });
+
+```
+
+Conditional variants also available: `conditionalCreate`, `conditionalUpdate`, `conditionalPatch`, `conditionalDelete` — pass `searchParameters: [["key", "value"]]` instead of `id`.
+
+### Search
+
+Search parameters are `[string, string][]` tuples (allows duplicate keys like multiple `_include`):
+
+```typescript
+// Type-level search
+const result = await client.searchType({
+  type: "Patient",
+  query: [["family", "Smith"], ["_count", "10"]],
+});
+if (result.isOk()) {
+  const bundle = result.value.resource; // Bundle with entries
+}
+
+// System-level search
+const result = await client.searchSystem({
+  query: [["_type", "Patient"], ["family", "Test"]],
+});
+
+// Compartment search
+const result = await client.searchCompartment({
+  compartment: "Patient",
+  compartmentId: "pt-1",
+  type: "Observation",
+  query: [["status", "final"]],
+});
+```
+
+### Transaction / Batch
+
+```typescript
+const result = await client.transaction({
+  format: "application/json",
+  bundle: {
+    resourceType: "Bundle",
+    type: "transaction",
+    entry: [
+      {
+        request: { method: "POST", url: "Patient" },
+        resource: { resourceType: "Patient", name: [{ family: "Doe" }] },
+      },
+      {
+        request: { method: "DELETE", url: "Patient/some-id" },
+      },
+    ],
+  },
+});
+
+// Batch (partial success OK)
+const result = await client.batch({
+  format: "application/json",
+  bundle: { resourceType: "Bundle", type: "batch", entry: [...] },
+});
+```
+
+### Operations
+
+```typescript
+// $validate
+const result = await client.validate<Patient>({
+  type: "Patient",
+  resource: patientResource,
+});
+
+// Custom operation
+const result = await client.operation<InputType, OutputType>({
+  type: "Patient",
+  id: "pt-1",
+  operation: "$everything",
+  resource: { /* parameters */ },
+});
+```
+
+### Raw SQL and Low-Level Requests
+
+Use `rawRequest` for Aidbox-specific endpoints (no built-in `$sql` method):
+
+```typescript
+// SQL query
+const result = await client.rawRequest({
+  method: "POST",
+  url: "/$sql",
+  headers: { "Content-Type": "application/json" },
+  body: JSON.stringify(["SELECT * FROM patient WHERE id = ?", "pt-1"]),
+});
+const rows = await result.response.json();
+
+// Any Aidbox endpoint — rawRequest throws on errors, request returns Result<T>
+const result = await client.request<MyType>({
+  method: "POST",
+  url: "/custom-endpoint",
+  body: JSON.stringify(data),
+});
+```
+
+### FHIR Types
+
+For full FHIR type coverage, use the `atomic-generate-types` skill to generate TypeScript types from FHIR packages.
+
+## Debugging
+
+### "Forbidden" errors
+1. Check if the resource type is allowed in the relevant AccessPolicy
+2. Use the root/admin client to bypass access policies for debugging
+3. Inspect policies: `curl -s -u "<root>:<secret>" "http://localhost:<port>/fhir/AccessPolicy?_count=50"`
+4. Test access: `POST /$access-policy-check`
+
+### Check Aidbox health
+
+```bash
+curl -s "http://localhost:<port>/health" | python3 -m json.tool
+```
+
+### Inspect a resource
+
+```bash
+curl -s -u "<client>:<secret>" "http://localhost:<port>/fhir/<ResourceType>/<id>" | python3 -m json.tool
+```
+
+### Upload init bundle to running instance
+
+To apply init bundle changes without restarting:
+
+```bash
+curl -s -u "<root>:<secret>" -X POST "http://localhost:<port>/fhir" \
+  -H "Content-Type: application/fhir+json" \
+  -d @init-bundle.json | python3 -m json.tool
+```
