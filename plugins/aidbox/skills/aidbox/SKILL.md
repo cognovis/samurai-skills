@@ -540,6 +540,60 @@ const result = await client.request<MyType>({
 
 For full FHIR type coverage, use the `atomic-generate-types` skill to generate TypeScript types from FHIR packages.
 
+## Production Pitfalls
+
+Common issues encountered in production Aidbox deployments. These are easy to hit and hard to diagnose.
+
+### Content-Type 422 trap
+
+Aidbox has two API layers with different Content-Type requirements:
+
+| Endpoint type | URL pattern | Required Content-Type |
+|---|---|---|
+| **FHIR** | `/fhir/Patient`, `/fhir/Encounter`, etc. | `application/fhir+json` |
+| **Native** | `/$sql`, `/ViewDefinition`, `/$import`, etc. | `application/json` |
+
+Sending the wrong Content-Type returns a 422 Unprocessable Entity that looks like a validation error but is actually a content negotiation failure. If you get an unexpected 422, check the Content-Type header first.
+
+```bash
+# Correct — FHIR endpoint
+curl -X POST "http://localhost:<port>/fhir/Patient" \
+  -H "Content-Type: application/fhir+json" \
+  -d '{"resourceType":"Patient"}'
+
+# Correct — native endpoint
+curl -X POST "http://localhost:<port>/$sql" \
+  -H "Content-Type: application/json" \
+  -d '["SELECT 1"]'
+```
+
+### Pagination: _offset returns empty silently
+
+The `_offset` search parameter returns empty results without any error or warning. For pagination, follow the Bundle `next` link instead:
+
+```bash
+# WRONG — silently returns empty
+GET /fhir/Patient?_count=10&_offset=10
+
+# RIGHT — follow next link from Bundle response
+GET /fhir/Patient?_count=10
+# Then follow response.link[rel="next"].url
+```
+
+Also be aware that `_count` defaults may return fewer results than exist. Always use `_summary=count` to get the true total:
+
+```bash
+# Get true total count
+GET /fhir/Patient?_summary=count
+# Response: {"total": 4523, ...}
+```
+
+### $materialize DROP+REBUILD
+
+When using `$materialize` with `type=table`, Aidbox drops the entire table and rebuilds it from scratch. On large tables (millions of rows), this means minutes of downtime where the table does not exist.
+
+`$materialize` is safe for initial bootstrap on empty databases. For production use with large tables, implement incremental sync (e.g., using the Changes API or AidboxTriggers) instead of repeated `$materialize` calls.
+
 ## Debugging
 
 ### "Forbidden" errors
