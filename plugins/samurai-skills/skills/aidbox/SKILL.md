@@ -366,11 +366,54 @@ POST /fhir/$import                   # Bulk import (ndjson)
 
 ### Terminology
 
+#### ValueSet $expand
+
+```bash
+# Use the native endpoint — the FHIR endpoint may not work reliably
+curl -s -u "<client>:<secret>" "http://localhost:<port>/ValueSet/<id>/$expand"
+
+# Filter by text
+curl -s -u "<client>:<secret>" "http://localhost:<port>/ValueSet/<id>/$expand?filter=diabetes"
+```
+
+#### CodeSystem $lookup — use Concept API instead
+
+The FHIR `$lookup` operation (`POST /fhir/CodeSystem/$lookup`) does not work in Aidbox. Use the native Concept API instead:
+
+```bash
+# Look up a code via native Concept API
+curl -s -u "<client>:<secret>" "http://localhost:<port>/Concept?system=http://loinc.org&code=1234-5"
+
+# Search by text
+curl -s -u "<client>:<secret>" "http://localhost:<port>/Concept?system=http://loinc.org&_ilike=glucose"
+```
+
+#### ConceptMap $translate
+
 ```http
-GET  /fhir/ValueSet/$expand?url=<vs-url>&filter=<text>
-POST /fhir/CodeSystem/$lookup
 POST /fhir/ConceptMap/$translate
 ```
+
+#### Two-Phase Terminology
+
+When you PUT a CodeSystem with embedded concepts, Aidbox extracts all concepts into a separate `Concept` table and stores the CodeSystem without them. This means `GET /fhir/CodeSystem/xyz` returns metadata only — the concept array will be absent.
+
+This is by design (Two-Phase FHIR Terminology), not a bug. Query concepts through the native Concept API shown above.
+
+#### PostgreSQL 65,535 parameter limit
+
+Large CodeSystems with more than ~16,000 concepts exceed PostgreSQL's prepared statement parameter limit.
+
+**Error**: `PreparedStatement can have at most 65,535 parameters`
+
+**Solutions**:
+1. **NDJSON `$import`**: `POST /fhir/$import` — async bulk import that bypasses the limit
+2. **Batch splitting**: Split into chunks of max 16,000 concepts per request
+3. **Slim properties**: Remove non-essential concept properties to reduce parameters per concept
+
+#### ConceptMap in transaction bundles
+
+Aidbox refuses PUT for existing ConceptMap resources inside transaction bundles. Use `"type": "batch"` instead of `"type": "transaction"` when your bundle includes ConceptMap updates.
 
 ## TypeScript SDK: @health-samurai/aidbox-client
 
