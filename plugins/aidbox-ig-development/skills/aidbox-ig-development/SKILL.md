@@ -49,11 +49,8 @@ Alternative layouts use `src/CS/`, `src/VS/`, `src/Profiles/` with a `target/` d
 # Download pre-configured docker-compose.yml
 curl -JO https://aidbox.app/runme
 
-# Start Aidbox + PostgreSQL
-docker compose up -d
-
-# Verify it's running
-curl -s -u $AIDBOX_AUTH "$AIDBOX_URL/health"
+# Start Aidbox + PostgreSQL (--wait blocks until healthy)
+docker compose up -d --wait
 ```
 
 Default access: `http://localhost:8080` with `Basic basic:secret`.
