@@ -21,6 +21,9 @@ plugins/
 ├── atomic-generate-types/
 │   ├── .claude-plugin/plugin.json
 │   └── skills/atomic-generate-types/SKILL.md
+├── aidbox-ig-development/
+│   ├── .claude-plugin/plugin.json
+│   └── skills/aidbox-ig-development/SKILL.md
 └── hs-search/
     ├── .claude-plugin/plugin.json
     └── skills/hs-search/SKILL.md
@@ -45,6 +48,12 @@ claude --plugin-dir ./plugins/samurai-skills
 
 Then invoke with `/samurai-skills:<skill-name>`.
 
+Run the vendor guard before pushing public skill changes:
+
+```bash
+bash scripts/vendor-leak-guard.sh
+```
+
 ## Installation (for users)
 
 ```bash
@@ -58,5 +67,9 @@ claude plugin install samurai-skills@samurai-skills
 claude plugin install aidbox@samurai-skills
 claude plugin install aidbox-sql-on-fhir@samurai-skills
 claude plugin install atomic-generate-types@samurai-skills
+claude plugin install aidbox-ig-development@samurai-skills
 claude plugin install hs-search@samurai-skills
 ```
+
+`fhir-validation` is available through the bundled `samurai-skills` plugin and
+through `npx skills add HealthSamurai/samurai-skills --skill fhir-validation`.

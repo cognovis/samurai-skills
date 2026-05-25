@@ -108,6 +108,12 @@ Examples:
 
 Use `template/SKILL.md` as a starting point. Each skill is a folder under `plugins/samurai-skills/skills/` with a `SKILL.md` file. See [Skills docs](https://code.claude.com/docs/en/skills) for the frontmatter format.
 
+Before opening a PR, run:
+
+```bash
+bash scripts/vendor-leak-guard.sh
+```
+
 ## Structure
 
 ```
