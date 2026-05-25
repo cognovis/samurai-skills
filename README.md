@@ -16,6 +16,8 @@ Install a specific skill by name:
 npx skills add HealthSamurai/samurai-skills --skill aidbox
 npx skills add HealthSamurai/samurai-skills --skill aidbox-sql-on-fhir
 npx skills add HealthSamurai/samurai-skills --skill atomic-generate-types
+npx skills add HealthSamurai/samurai-skills --skill fhir-validation
+npx skills add HealthSamurai/samurai-skills --skill aidbox-ig-development
 npx skills add HealthSamurai/samurai-skills --skill hs-search
 ```
 
@@ -31,8 +33,11 @@ From the Claude Code marketplace:
 claude plugin install aidbox@samurai-skills
 claude plugin install aidbox-sql-on-fhir@samurai-skills
 claude plugin install atomic-generate-types@samurai-skills
+claude plugin install aidbox-ig-development@samurai-skills
 claude plugin install hs-search@samurai-skills
 ```
+
+`fhir-validation` is currently available through the all-skills install.
 
 ## Skills
 
@@ -41,6 +46,8 @@ claude plugin install hs-search@samurai-skills
 | `aidbox` | Aidbox FHIR platform — API, configuration, access control, terminology |
 | `aidbox-sql-on-fhir` | SQL on FHIR with Aidbox — ViewDefinitions, $materialize, sof schema |
 | `atomic-generate-types` | Generate FHIR types using @atomic-ehr/codegen — TypeScript, Python, C# |
+| `fhir-validation` | FHIR validation with Aidbox, FHIR Schema, $validate, and OperationOutcome |
+| `aidbox-ig-development` | FHIR Implementation Guide development, testing, validation, and publishing |
 | `hs-search` | Search health-samurai.io — docs, blog, case studies, examples |
 
 ### `aidbox`
@@ -70,6 +77,24 @@ Examples:
 - "Set up `scripts/generate-types.ts` for a Python project"
 - "Update the tree-shake config to include Observation and Encounter"
 
+### `fhir-validation`
+
+FHIR resource validation guidance for Aidbox and FHIR Schema. Covers `$validate`, OperationOutcome errors, validation levels, validator comparison, and migration from Zen Schema or JSON Schema validation.
+
+Examples:
+- "Why is my Observation resource failing validation?"
+- "Configure Aidbox to use the FHIR Schema Validator"
+- "Compare Aidbox validation with the HL7 Java Validator"
+
+### `aidbox-ig-development`
+
+FHIR Implementation Guide development lifecycle with Aidbox. Covers SUSHI/FSH setup, package installation, CodeSystem and ValueSet testing, profile validation, IG Publisher runs, and QA report review.
+
+Examples:
+- "Set up a local Aidbox server for IG testing"
+- "Test a ValueSet expansion and validate codes in Aidbox"
+- "Publish this IG and review the QA output"
+
 ### `hs-search`
 
 Search Health Samurai docs, articles, landing pages, and examples when you need current product details or the exact documentation page.
@@ -96,6 +121,8 @@ plugins/
         ├── aidbox/SKILL.md
         ├── aidbox-sql-on-fhir/SKILL.md
         ├── atomic-generate-types/SKILL.md
+        ├── fhir-validation/SKILL.md
+        ├── aidbox-ig-development/SKILL.md
         └── hs-search/SKILL.md
 template/
 └── SKILL.md                            # Template for new skills
