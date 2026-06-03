@@ -85,6 +85,30 @@ curl -s -u $AIDBOX_AUTH -X POST "$AIDBOX_URL/fhir/\$fhir-package-install" \
   }'
 ```
 
+### Override or Skip Transitive Dependencies (2603+)
+
+When a package depends on a transitive package that is unavailable in the target registry (e.g. US Core 8.0.0 requires `us.nlm.vsac@0.23.0`, but Simplifier only hosts up to `0.17.0`), the install fails. Use `override` parameters to pin a different version or skip the dependency entirely:
+
+```bash
+# Pin us.nlm.vsac to 0.17.0 instead of the requested version
+curl -s -u $AIDBOX_AUTH -X POST "$AIDBOX_URL/fhir/\$fhir-package-install" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "resourceType": "Parameters",
+    "parameter": [
+      { "name": "package",  "valueString": "hl7.fhir.us.core@8.0.0" },
+      { "name": "registry", "valueString": "https://packages.simplifier.net" },
+      { "name": "override", "part": [
+          { "name": "from", "valueString": "us.nlm.vsac" },
+          { "name": "to",   "valueString": "0.17.0" }
+      ]}
+    ]
+  }'
+```
+
+- Use a version-qualified `from` (`"us.nlm.vsac@0.23.0"`) to override only when that exact version is requested.
+- Set `to` to `"false"` to **skip** (exclude) the dependency entirely.
+
 ### Local Package Install (Build + Docker Copy)
 
 For development, build and install from local source:

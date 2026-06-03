@@ -94,7 +94,11 @@ StructureDefinitions are complex and hard to implement correctly. Only a handful
 
 ### Validator engines
 
-Aidbox supports three validation engines. **FHIR Schema Validator is the recommended default** for new deployments.
+**FHIR Schema Validator is the default and the only forward-looking engine.** FHIR Schema validation mode is enabled by default as of the **2605 LTS** (May 2026). Per the 2604 release notes, **2605 is the last release that supports the legacy Entity/Attribute and Zen validators** — they are removed thereafter, so do not start new work on them and plan migrations off them now. Enable FHIR Schema explicitly on older instances with `BOX_FHIR_SCHEMA_VALIDATION=true`.
+
+> Some features now *require* FHIR Schema mode. For example, SQL on FHIR (ViewDefinition CRUD, `$run`, `$sql`, `$materialize`) only works with `fhir.validation.fhir-schema-validation=true` from version 2604 onward — see the `aidbox-sql-on-fhir` skill.
+
+The table below compares engine capabilities; treat Zen/JSON Schema columns as legacy reference only.
 
 | Feature | FHIR Schema | Zen Schema | JSON Schema |
 |---------|:-----------:|:----------:|:-----------:|
