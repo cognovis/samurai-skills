@@ -12,6 +12,10 @@ description: >
 
 Build dashboards and analytics on Aidbox by flattening FHIR resources into SQL tables using **SQL on FHIR ViewDefinitions**.
 
+## Prerequisite: FHIR Schema mode (2604+)
+
+Starting from version **2604**, SQL on FHIR **requires fhir-schema validation mode** (`fhir.validation.fhir-schema-validation=true`, env var `BOX_FHIR_SCHEMA_VALIDATION=true`). ViewDefinitions are stored in the FHIR Artifact Registry (FAR), which is only available in fhir-schema mode. **Without it, ViewDefinition CRUD, `$run`, `$sql`, and `$materialize` will not work.** If those operations fail on a recent Aidbox, check this setting first. See the `fhir-validation` skill for enabling the engine.
+
 ## Overview
 
 The approach has three steps:
